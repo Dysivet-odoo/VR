@@ -88,7 +88,13 @@ function Model(name, count_u, count_v) {
     this.iVertexBuffer = gl.createBuffer();
     this.iIndexBuffer = gl.createBuffer();
     this.iVertexNormalBuffer = gl.createBuffer();
+    this.iTexCoordsBuffer = gl.createBuffer();
+    this.iTangentBuffer = gl.createBuffer();
     this.count = 0;
+
+    this.textureDiffuse = gl.createTexture();
+    this.textureNormal = gl.createTexture();
+    this.textureSpecular = gl.createTexture();
 
     this.COUNT_POINTS_U = count_u;
     this.COUNT_POINTS_V = count_v;
@@ -115,6 +121,16 @@ function Model(name, count_u, count_v) {
         gl.bufferData(gl.ARRAY_BUFFER, data.vertexNormalsF32, gl.STREAM_DRAW);
         gl.vertexAttribPointer(shProgram.iVertexNormal, 3, gl.FLOAT, true, 0, 0);
         gl.enableVertexAttribArray(shProgram.iVertexNormal);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iTexCoordsBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.texCoordsList), gl.STREAM_DRAW);
+        gl.vertexAttribPointer(shProgram.iTexAttrib, 2, gl.FLOAT, false, 0, 0);
+		gl.enableVertexAttribArray(shProgram.iTexAttrib);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iTangentBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.tangentList), gl.STREAM_DRAW);
+        gl.vertexAttribPointer(shProgram.iTangentAttrib, 3, gl.FLOAT, false, 0, 0);
+		gl.enableVertexAttribArray(shProgram.iTangentAttrib);
 
         this.count = indicesU16.length;
     }
@@ -154,6 +170,9 @@ function Model(name, count_u, count_v) {
     {
         let vertexList = [];
         let triangleList = [];
+        let texCoordsList = [];
+        let tangentList = [];
+
         for(let v_index=0; v_index<polylinesV.length; v_index++){
             for(let u_index=0; u_index<polylinesU.length; u_index++){
                 let vertex = new Vertex(getVector(polylinesU[u_index], polylinesV[v_index]), [polylinesU[u_index], polylinesV[v_index]]);
@@ -164,7 +183,9 @@ function Model(name, count_u, count_v) {
             }
         }
 
-        this.calculateNormals(vertexList, triangleList);
+        this.calculateNormals(vertexList);
+        this.calcTexCoords(texCoordsList);
+        this.calcTangent(tangentList);
 
         verticesF32 = new Float32Array(vertexList.length*3);
         for (let i=0; i<vertexList.length; i++)
@@ -191,10 +212,10 @@ function Model(name, count_u, count_v) {
         }
 
 
-        return {verticesF32, indicesU16, vertexNormalsF32};
+        return {verticesF32, indicesU16, vertexNormalsF32, texCoordsList, tangentList};
     }
 
-    this.calculateNormals = function(vertexList, triangleList){
+    this.calculateNormals = function(vertexList){
         for (let i=0; i<vertexList.length; i++){
             let vertex = vertexList[i];
             let p0 = vertex.p;
@@ -225,6 +246,126 @@ function Model(name, count_u, count_v) {
             ];
             vertexList[i].normal = n;
         }
+    }
+
+    this.calcTexCoords = function(texCoordsList){
+        for(let u=0; u < this.COUNT_POINTS_U; u++){
+            for(let v=0; v < this.COUNT_POINTS_V; v++){
+                texCoordsList.push(u / this.COUNT_POINTS_U, v / this.COUNT_POINTS_V);
+            }
+        }
+    }
+
+    this.calcTangent = function(tangentList){
+        for(let u=0; u < this.COUNT_POINTS_U; u++){
+            for(let v=0; v < this.COUNT_POINTS_V; v++){
+                tangentList.push(1,0,0);
+            }
+        }
+    }
+
+    this.loadTextures = function(){
+        //Diffuse
+        gl.bindTexture(gl.TEXTURE_2D, this.textureDiffuse);
+		gl.texImage2D(
+			gl.TEXTURE_2D,
+			0,
+			gl.RGBA,
+			1,
+			1,
+			0,
+			gl.RGBA,
+			gl.UNSIGNED_BYTE,
+			new Uint8Array([0, 0, 255, 255]),
+		);
+
+        const image1 = new Image();
+		image1.onload = () => {
+			gl.bindTexture(gl.TEXTURE_2D, this.textureDiffuse);
+			gl.texImage2D(
+				gl.TEXTURE_2D,
+				0,
+				gl.RGBA,
+				gl.RGBA,
+				gl.UNSIGNED_BYTE,
+				image1,
+			);
+			gl.generateMipmap(gl.TEXTURE_2D);
+		};
+		image1.src = "Texture/Poliigon_WoodRoofShingle_7834_BaseColor.jpg";
+
+        // Normal
+        gl.bindTexture(gl.TEXTURE_2D, this.textureNormal);
+		gl.texImage2D(
+			gl.TEXTURE_2D,
+			0,
+			gl.RGBA,
+			1,
+			1,
+			0,
+			gl.RGBA,
+			gl.UNSIGNED_BYTE,
+			new Uint8Array([0, 0, 255, 255]),
+		);
+
+        const image2 = new Image();
+		image2.onload = () => {
+			gl.bindTexture(gl.TEXTURE_2D, this.textureSpecular);
+			gl.texImage2D(
+				gl.TEXTURE_2D,
+				0,
+				gl.RGBA,
+				gl.RGBA,
+				gl.UNSIGNED_BYTE,
+				image2,
+			);
+			gl.generateMipmap(gl.TEXTURE_2D);
+		};
+		image2.src = "Texture/Poliigon_WoodRoofShingle_7834_Roughness.jpg";
+
+        const image3 = new Image();
+		image3.onload = () => {
+			gl.bindTexture(gl.TEXTURE_2D, this.textureNormal);
+			gl.texImage2D(
+				gl.TEXTURE_2D,
+				0,
+				gl.RGBA,
+				gl.RGBA,
+				gl.UNSIGNED_BYTE,
+				image3,
+			);
+			gl.generateMipmap(gl.TEXTURE_2D);
+		};
+		image3.src = "Texture/Poliigon_WoodRoofShingle_7834_Normal.png";
+
+        // Specular
+        gl.bindTexture(gl.TEXTURE_2D, this.textureSpecular);
+		gl.texImage2D(
+			gl.TEXTURE_2D,
+			0,
+			gl.RGBA,
+			1,
+			1,
+			0,
+			gl.RGBA,
+			gl.UNSIGNED_BYTE,
+			new Uint8Array([0, 0, 255, 255]),
+		);
+
+    }
+
+    this.bindTextures = function(){
+        gl.activeTexture(gl.TEXTURE0);
+		gl.bindTexture(gl.TEXTURE_2D, this.textureDiffuse);
+		gl.uniform1i(shProgram.idiffuseTexture, 0);
+
+		gl.activeTexture(gl.TEXTURE1);
+		gl.bindTexture(gl.TEXTURE_2D, this.textureSpecular);
+		gl.uniform1i(shProgram.ispecularTexture, 1);
+
+		gl.activeTexture(gl.TEXTURE2);
+		gl.bindTexture(gl.TEXTURE_2D, this.textureNormal);
+		gl.uniform1i(shProgram.inormalTexture, 2);
     }
 
 }

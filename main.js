@@ -70,13 +70,18 @@ function draw() {
        combined transformation matrix, and send that to the shader program. */
     let modelViewProjection = m4.multiply(projection, matAccum1 );
 
-    gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection );
+    let normalMatrix = m4.transpose(m4.inverse(matAccum1));
 
-    updateLightPosition();
+    gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection );
+    gl.uniformMatrix4fv(shProgram.inormalMatrix, false, normalMatrix );
+
+    //updateLightPosition();
+    gl.uniform3fv(shProgram.iLightSource, [0.0, 10.0, 0.0]); 
     
     /* Draw the six faces of a cube, with different colors. */
     gl.uniform4fv(shProgram.iColor, [1,1,0,1] );
 
+    surface.bindTextures();
     surface.Draw();
 }
 
@@ -94,9 +99,16 @@ function initGL(count_u, count_v) {
     shProgram.iColor                     = gl.getUniformLocation(prog, "color");
     shProgram.iVertexNormal              = gl.getAttribLocation(prog, "normal");
     shProgram.iLightSource               = gl.getUniformLocation(prog, "lightPos");
+    shProgram.iTexAttrib                 = gl.getAttribLocation(prog, "texCoord");
+    shProgram.iTangentAttrib             = gl.getAttribLocation(prog, "tangent");
+    shProgram.idiffuseTexture            = gl.getUniformLocation(prog, "diffuseTexture");
+    shProgram.ispecularTexture           = gl.getUniformLocation(prog, "specularTexture");
+    shProgram.inormalTexture             = gl.getUniformLocation(prog, "normalTexture");
+    shProgram.inormalMatrix              = gl.getUniformLocation(prog, "normalMatrix");
 
     surface = new Model('Surface', count_u, count_v);
     surface.BufferData();
+    surface.loadTextures();
 
     gl.enable(gl.DEPTH_TEST);
 }
@@ -165,5 +177,5 @@ function init() {
     spaceball = new TrackballRotator(canvas, draw, 0);
 
     draw();
-    animate();
+    //animate();
 }
