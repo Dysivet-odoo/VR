@@ -1,41 +1,13 @@
-
-
-// Vertex shader
 const vertexShaderSource = `
 attribute vec3 vertex;
-attribute vec3 normal;
-attribute vec2 texCoord;
-attribute vec3 tangent;
-
-uniform mat4 normalMatrix;
-uniform mat4 ModelViewProjectionMatrix;
-
-varying vec3 var_position;
-varying vec3 var_normal;
-varying vec3 var_tangent;
-varying vec3 var_bitangent;
-varying vec2 var_texCoord;
+uniform mat4 ModelViewMatrix;
+uniform mat4 ProjectionMatrix;
 
 void main() {
-    vec4 pos = ModelViewProjectionMatrix * vec4(vertex,1.0);
-    var_position = pos.xyz;
-    var_texCoord = texCoord;
+    gl_Position = ProjectionMatrix * ModelViewMatrix * vec4(vertex, 1.0);
+}
+`;
 
-    vec3 normal = normalize((normalMatrix * vec4(normal, 0.0)).xyz);
-    vec3 tangent = normalize((normalMatrix * vec4(tangent, 0.0)).xyz);
-    
-    normal = normalize(normal - dot(normal, tangent) * tangent);
-    vec3 bitangent = cross(normal, tangent);
-
-    var_normal = normal;
-    var_tangent = tangent;
-    var_bitangent = bitangent;
-
-    gl_Position = pos;
-}`;
-
-
-// Fragment shader
 const fragmentShaderSource = `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
    precision highp float;
@@ -43,47 +15,25 @@ const fragmentShaderSource = `
    precision mediump float;
 #endif
 
-varying vec3 var_position;
-varying vec3 var_normal;
-varying vec3 var_tangent;
-varying vec3 var_bitangent;
-varying vec2 var_texCoord;
-
-uniform vec3 lightPos;
-uniform sampler2D diffuseTexture;
-uniform sampler2D specularTexture;
-uniform sampler2D normalTexture;
-
+uniform vec4 color;
 void main() {
-    vec3 viewerPos = vec3(0.0, 0.0, 10.0);
-    vec3 ambient = vec3(0.2, 0.09, 0.0);
-
-    float shininess = 80.0;
-    float kA = 1.0;
-    float kD = 1.0;
-    float kS = 1.0;
-
-    vec3 textureNormal = texture2D(normalTexture, var_texCoord).xyz;
-    textureNormal = 2.0 * textureNormal - vec3(1.0, 1.0, 1.0);
-
-    mat3 TBN = mat3(var_tangent, var_bitangent, var_normal);
-    vec3 textureNormalTransf = normalize(TBN * textureNormal);
-
-    vec3 lightDir = normalize(lightPos - var_position);
-
-    float lambertian = max(dot(textureNormalTransf, lightDir), 0.0);
-    vec3 specular = vec3(0.0, 0.0, 0.0);
-    vec3 diffuse = vec3(0.0, 0.0, 0.0);
-    if (lambertian > 0.0){
-        diffuse = lambertian * texture2D(diffuseTexture, var_texCoord).rgb;
-
-        vec3 R = reflect(-lightDir, textureNormalTransf);
-        vec3 V = normalize(viewerPos - var_position);
-
-        float specAngle = max(dot(V, R), 0.0);
-        specular = pow(specAngle, shininess) * texture2D(specularTexture, var_texCoord).rgb;
-    }
-    gl_FragColor = vec4(kA * ambient +
-                      kD * diffuse +
-                      kS * specular, 1.0);
+    gl_FragColor = color;
 }`;
+
+const bgVertexSrc = `
+attribute vec2 position;
+attribute vec2 texCoord;
+varying vec2 vTex;
+void main() {
+    gl_Position = vec4(position,0,1);
+    vTex = texCoord;
+}`;
+
+const bgFragmentSrc = `
+precision mediump float;
+varying vec2 vTex;
+uniform sampler2D uTexture;
+void main() {
+    gl_FragColor = texture2D(uTexture, vTex);
+}
+`;
