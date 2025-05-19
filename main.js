@@ -79,7 +79,6 @@ function draw() {
     let rotateToPointZero = m4.axisRotation([0.707, 0.707, 0], 0.7);
     let translateToPointZero = m4.translation(0, 0, -10);
 
-    // Кольори так само, як у проекті Vlad/MSVR
     const colPoly = [0.5, 0.5, 0.5, 1]; // сірий колір для полігонів
     const colEdge = [1, 1, 1, 1]; // білий колір для ребер
 
